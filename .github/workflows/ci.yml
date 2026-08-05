@@ -12,14 +12,29 @@ concurrency:
 jobs:
   build-test:
     name: Build, test & lint
-    # Requires a runner image with Xcode 26 / the iOS 26 SDK. GitHub's hosted images may lag the
-    # latest Xcode; pin to one that ships it (or use a self-hosted runner) when available.
-    runs-on: macos-15
+    # macos-26 ships Xcode 26.6 (17F113) as its default, which carries the iOS 26 SDK that
+    # FoundationModels lives in. macos-15 does NOT: its default is Xcode 16.4 / iOS 18.5.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 26
-        run: sudo xcode-select -switch /Applications/Xcode_26.app || echo "Xcode 26 not present; using default toolchain"
+      # Assert the toolchain instead of assuming it, and fail HERE if it is wrong. This step used to
+      # run `xcode-select -switch /Applications/Xcode_26.app || echo "not present"`. That path never
+      # exists on any runner image — they install versioned paths like /Applications/Xcode_26.6.app —
+      # so the `||` swallowed the error, the job silently fell back to Xcode 16.4, and it died three
+      # minutes later inside the compiler with a baffling "No such module 'FoundationModels'".
+      - name: Verify toolchain has the iOS 26 SDK
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          sdk=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          echo "iOS Simulator SDK: $sdk"
+          case "$sdk" in
+            26.*) ;;
+            *) echo "::error::FoundationModels needs the iOS 26 SDK; this toolchain has $sdk"; exit 1 ;;
+          esac
+          fw="$(xcrun --sdk iphonesimulator --show-sdk-path)/System/Library/Frameworks/FoundationModels.framework"
+          test -d "$fw" || { echo "::error::FoundationModels.framework missing from the iOS SDK"; exit 1; }
 
       # SwiftFormat and SwiftLint are pinned to exact releases; `brew install` tracks latest, and a
       # formatter that enables a rule by default turns CI red on code nobody touched. That is not
