@@ -1,0 +1,28 @@
+# Xcode / Swift
+DerivedData/
+build/
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# xcodegen generates the project from project.yml — keep it out of VCS
+*.xcodeproj/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+
+# Tooling
+*.log
+.tools/
+.tools_simdevice
+Brewfile.lock.json

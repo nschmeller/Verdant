@@ -1,0 +1,52 @@
+# SwiftLint configuration — Verdant
+included:
+  - Verdant
+  - VerdantTests
+
+excluded:
+  - DerivedData
+  - .build
+
+disabled_rules:
+  # swiftformat owns brace placement; its wrapped-condition style intentionally puts the
+  # opening brace on its own line, which this rule would otherwise flag.
+  - opening_brace
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - first_where
+  - last_where
+  - sorted_first_last
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+  - redundant_nil_coalescing
+  - closure_spacing
+  - contains_over_first_not_nil
+
+line_length:
+  warning: 120
+  error: 160
+  ignores_comments: true
+  ignores_urls: true
+
+identifier_name:
+  # Single-character names are idiomatic in this statistics-heavy code (z-score, n, etc.).
+  min_length: 1
+  excluded: [id]
+
+type_name:
+  max_length: 50
+
+function_body_length:
+  warning: 70
+  error: 120
+
+# On-device LLM prompts are intentionally long string literals.
+type_body_length:
+  warning: 400
+  error: 600
+
+file_length:
+  warning: 500
+  error: 800

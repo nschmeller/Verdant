@@ -1,0 +1,73 @@
+name: Verdant
+options:
+  bundleIdPrefix: com.nschmeller
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    # Approachable concurrency: code is MainActor-isolated by default; only the
+    # explicitly-declared actors (MetricStatsProvider, InsightWriter) run off-main.
+    SWIFT_APPROACHABLE_CONCURRENCY: "YES"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_UPCOMING_FEATURE_INFER_SENDABLE_FROM_CAPTURES: "YES"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+    GENERATE_INFOPLIST_FILE: "NO"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  Verdant:
+    type: application
+    platform: iOS
+    sources:
+      - path: Verdant
+        excludes:
+          - "Resources/Info.plist"
+          - "Resources/Verdant.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nschmeller.Verdant
+        PRODUCT_NAME: Verdant
+        INFOPLIST_FILE: Verdant/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Verdant/Resources/Verdant.entitlements
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # Generate type-safe Swift symbols for asset-catalog colors/images
+        # (e.g. ColorResource.accentColor) instead of stringly-typed names.
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: "YES"
+    dependencies:
+      - sdk: HealthKit.framework
+      - sdk: BackgroundTasks.framework
+
+  VerdantTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - VerdantTests
+    dependencies:
+      - target: Verdant
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nschmeller.VerdantTests
+        GENERATE_INFOPLIST_FILE: "YES"
+
+schemes:
+  Verdant:
+    build:
+      targets:
+        Verdant: all
+        VerdantTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - VerdantTests

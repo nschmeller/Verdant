@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build, test & lint
+    # Requires a runner image with Xcode 26 / the iOS 26 SDK. GitHub's hosted images may lag the
+    # latest Xcode; pin to one that ships it (or use a self-hosted runner) when available.
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: sudo xcode-select -switch /Applications/Xcode_26.app || echo "Xcode 26 not present; using default toolchain"
+
+      - name: Install tools
+        run: brew install xcodegen swiftlint swiftformat xcbeautify
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Lint & format check
+        run: |
+          swiftlint lint --strict
+          swiftformat --lint Verdant VerdantTests
+
+      # Resolve a real device instead of pinning a name: a runner image can ship a different device
+      # set from the one a name was written against, and a name that no longer resolves fails the job
+      # before a single test runs. Any booted-capable iPhone runs this suite identically.
+      #
+      # This comment used to add that `iPhone 16 Pro` "already fails locally, where the iOS 26 runtime
+      # offers the iPhone 17 family and no 16 Pro at all". That is wrong, and it was checked on
+      # 2026-08-02 rather than reasoned about: `simctl list devices available` does show only the 17
+      # family, but the 16 Pro DEVICE TYPE is installed, and Xcode instantiates a simulator from a type
+      # plus an available runtime on demand — the README's pinned command runs the full suite fine.
+      # The claim had already propagated into notes elsewhere as a reason to "fix" that working
+      # command. Dynamic resolution is still right here; the reason given for it was not.
+      - name: Pick a simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          udid=$(xcrun simctl list devices available --json \
+            | python3 -c 'import json,sys;
+          d=json.load(sys.stdin)["devices"]
+          rs=sorted([r for r in d if "iOS" in r], reverse=True)
+          for r in rs:
+              for dev in d[r]:
+                  if dev.get("isAvailable") and "iPhone" in dev["name"]:
+                      print(dev["udid"]); raise SystemExit
+          raise SystemExit("no available iPhone simulator")')
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices | grep -F "$udid"
+          # Boot it HERE and block until boot completes. `xcodebuild test` will happily start
+          # installing onto a device that is still coming up, and then fails the whole run with
+          # FBSOpenApplicationErrorDomain 6 — "Application failed preflight checks (Busy)". That is
+          # a launch race, not a test failure, and it reproduces regularly on a loaded machine, so
+          # without this the suite goes intermittently red for reasons unrelated to the code.
+          xcrun simctl boot "$udid" || true   # already-booted is not an error
+          xcrun simctl bootstatus "$udid" -b
+
+      - name: Build & test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Verdant.xcodeproj \
+            -scheme Verdant \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify
