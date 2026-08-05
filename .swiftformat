@@ -12,4 +12,12 @@
 --trimwhitespace always
 --emptybraces no-space
 --ranges no-space
+
+# Single-line bodies are deliberate here — `if let error { cont.resume(...); return }` guard-style
+# early exits, and one-line if-expressions such as `let x = if case .y = z { true } else { false }`.
+# SwiftFormat 0.62 enabled both of these rules by default, which would rewrap 46 files. Requires
+# SwiftFormat >= 0.62: older versions reject these names with "Unknown rule".
+--disable wrapIfStatementBodies
+--disable wrapIfExpressionBodies
+
 --exclude DerivedData,.build

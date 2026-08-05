@@ -21,8 +21,31 @@ jobs:
       - name: Select Xcode 26
         run: sudo xcode-select -switch /Applications/Xcode_26.app || echo "Xcode 26 not present; using default toolchain"
 
+      # SwiftFormat and SwiftLint are pinned to exact releases; `brew install` tracks latest, and a
+      # formatter that enables a rule by default turns CI red on code nobody touched. That is not
+      # hypothetical: 0.62 enabled wrapIfStatementBodies and failed 46 untouched files here. Bump
+      # these deliberately, in a commit that also carries whatever reformatting the new version wants.
       - name: Install tools
-        run: brew install xcodegen swiftlint swiftformat xcbeautify
+        env:
+          SWIFTFORMAT_VERSION: "0.62.1"
+          SWIFTLINT_VERSION: "0.65.0"
+        run: |
+          set -euo pipefail
+          brew install xcodegen xcbeautify
+          mkdir -p "$RUNNER_TEMP/tools"
+          curl -fsSL -o "$RUNNER_TEMP/swiftformat.zip" \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip"
+          curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          unzip -qjo "$RUNNER_TEMP/swiftformat.zip" swiftformat -d "$RUNNER_TEMP/tools"
+          unzip -qjo "$RUNNER_TEMP/swiftlint.zip" swiftlint -d "$RUNNER_TEMP/tools"
+          chmod +x "$RUNNER_TEMP/tools/swiftformat" "$RUNNER_TEMP/tools/swiftlint"
+          echo "$RUNNER_TEMP/tools" >> "$GITHUB_PATH"
+
+      - name: Verify pinned tool versions
+        run: |
+          swiftformat --version
+          swiftlint --version
 
       - name: Generate project
         run: xcodegen generate
