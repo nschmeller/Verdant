@@ -30,7 +30,9 @@ jobs:
       - name: Lint & format check
         run: |
           swiftlint lint --strict
-          swiftformat --lint Verdant VerdantTests
+          # Paths must precede `--lint`: it is a flag, and SwiftFormat parses a following
+          # path as its value, failing with "--lint argument does not expect a value".
+          swiftformat Verdant VerdantTests --lint
 
       # Resolve a real device instead of pinning a name: a runner image can ship a different device
       # set from the one a name was written against, and a name that no longer resolves fails the job
