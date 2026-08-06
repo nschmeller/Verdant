@@ -281,7 +281,12 @@ struct TokenHarnessTests {
         let toolTokens = await TokenBudget.tokenCount(forTools: tools)
 
         guard let instructionTokens, let toolTokens else {
-            #expect(Instructions.replicator.count < 1000)
+            // 1000 was stale and had never once been evaluated: this branch only runs where the model
+            // cannot tokenise — below iOS 26.4, or on a simulator with no model provisioned — which
+            // is never a dev machine, so the bound went unchecked while the instructions grew to
+            // 1,982 characters. It is a crude proxy for "the prompt has not run away" when no real
+            // count is available; 2,400 leaves room to edit without silently licensing a rewrite.
+            #expect(Instructions.replicator.count < 2400)
             return
         }
 
